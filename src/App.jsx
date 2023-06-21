@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /* eslint-disable jsx-a11y/accessible-emoji */
 import cn from 'classnames';
 import React, { useState } from 'react';
@@ -26,7 +25,36 @@ const preparedProducts = productsFromServer.map((product) => {
   };
 });
 
-const getFilteredProducts = (selectedUser, selectedCategories, query) => {
+const getSortedProducts = (sortType, products) => {
+  switch (sortType) {
+    case 'id':
+      return products
+        .sort((p1, p2) => p1.id - p2.id);
+
+    case 'name':
+      return products
+        .sort((p1, p2) => p1.name.localeCompare(p2.name));
+
+    case 'category':
+      return products
+        .sort((p1, p2) => p1.category.title.localeCompare(p2.category.title));
+
+    case 'user':
+      return products
+        .sort((p1, p2) => p1.user.name.localeCompare(p2.user.name));
+
+    default:
+      return true;
+  }
+};
+
+const getVisibleProducts = (
+  selectedUser,
+  selectedCategories,
+  query,
+  sortType,
+  sortOrder,
+) => {
   let filteredProducts = preparedProducts;
 
   if (selectedUser) {
@@ -48,6 +76,12 @@ const getFilteredProducts = (selectedUser, selectedCategories, query) => {
       .filter(product => product.name.toLowerCase().includes(normalizedquery));
   }
 
+  getSortedProducts(sortType, filteredProducts, sortOrder);
+
+  if (sortOrder === 'DESC') {
+    filteredProducts.reverse();
+  }
+
   return filteredProducts;
 };
 
@@ -55,8 +89,16 @@ export const App = () => {
   const [selectedUser, setselectedUser] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [query, setQuery] = useState('');
+  const [sortType, setSortType] = useState('id');
+  const [sortOrder, setSortOrder] = useState('ASC');
 
-  const products = getFilteredProducts(selectedUser, selectedCategories, query);
+  const products = getVisibleProducts(
+    selectedUser,
+    selectedCategories,
+    query,
+    sortType,
+    sortOrder,
+  );
 
   const handleFilterByUser = (userId) => {
     setselectedUser(userId);
@@ -82,6 +124,18 @@ export const App = () => {
     setQuery(event.target.value);
   };
 
+  const handleSortBy = (sortBy) => {
+    if (sortOrder === 'ASC') {
+      setSortOrder('DESC');
+    }
+
+    if (sortOrder === 'DESC') {
+      setSortOrder('ASC');
+    }
+
+    setSortType(sortBy);
+  };
+
   const categoriesAmount = categoriesFromServer.length;
 
   return (
@@ -97,6 +151,7 @@ export const App = () => {
                 data-cy="FilterAllUsers"
                 href="#/"
                 onClick={() => handleFilterByUser(null)}
+                className={cn({ 'is-active': !selectedUser })}
               >
                 All
               </a>
@@ -107,6 +162,7 @@ export const App = () => {
                   href="#/"
                   onClick={() => handleFilterByUser(user.id)}
                   key={user.id}
+                  className={cn({ 'is-active': selectedUser === user.id })}
                 >
                   {user.name}
                 </a>
@@ -148,6 +204,9 @@ export const App = () => {
                   'button mr-2 my-1', {
                     'is-info': selectedCategories.length === 0
                       || selectedCategories.length === categoriesAmount,
+                  }, {
+                    'is-otlined': selectedCategories.length
+                      === categoriesAmount,
                   },
                 )}
               >
@@ -184,10 +243,11 @@ export const App = () => {
         </div>
 
         <div className="box table-container">
-          <p data-cy="NoMatchingMessage">
-            No products matching selected criteria
-          </p>
-
+          {products.length === 0 && (
+            <p data-cy="NoMatchingMessage">
+              No products matching selected criteria
+            </p>
+          )}
           <table
             data-cy="ProductTable"
             className="table is-striped is-narrow is-fullwidth"
@@ -198,9 +258,12 @@ export const App = () => {
                   <span className="is-flex is-flex-wrap-nowrap">
                     ID
 
-                    <a href="#/">
+                    <a href="#/" onClick={() => handleSortBy('id')}>
                       <span className="icon">
-                        <i data-cy="SortIcon" className="fas fa-sort" />
+                        <i
+                          data-cy="SortIcon"
+                          className="fas fa-sort"
+                        />
                       </span>
                     </a>
                   </span>
@@ -210,7 +273,7 @@ export const App = () => {
                   <span className="is-flex is-flex-wrap-nowrap">
                     Product
 
-                    <a href="#/">
+                    <a href="#/" onClick={() => handleSortBy('name')}>
                       <span className="icon">
                         <i data-cy="SortIcon" className="fas fa-sort-down" />
                       </span>
@@ -222,7 +285,7 @@ export const App = () => {
                   <span className="is-flex is-flex-wrap-nowrap">
                     Category
 
-                    <a href="#/">
+                    <a href="#/" onClick={() => handleSortBy('category')}>
                       <span className="icon">
                         <i data-cy="SortIcon" className="fas fa-sort-up" />
                       </span>
@@ -234,7 +297,7 @@ export const App = () => {
                   <span className="is-flex is-flex-wrap-nowrap">
                     User
 
-                    <a href="#/">
+                    <a href="#/" onClick={() => handleSortBy('user')}>
                       <span className="icon">
                         <i data-cy="SortIcon" className="fas fa-sort" />
                       </span>
