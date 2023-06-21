@@ -26,7 +26,7 @@ const preparedProducts = productsFromServer.map((product) => {
   };
 });
 
-const getFilteredProducts = (selectedUser, selectedCategory) => {
+const getFilteredProducts = (selectedUser, selectedCategories, query) => {
   let filteredProducts = preparedProducts;
 
   if (selectedUser) {
@@ -34,9 +34,18 @@ const getFilteredProducts = (selectedUser, selectedCategory) => {
       .filter(product => product.user.id === selectedUser);
   }
 
-  if (selectedCategory.length > 0) {
+  if (selectedCategories.length > 0) {
     filteredProducts = filteredProducts
-      .filter(product => selectedCategory.includes(product.categoryId));
+      .filter(product => selectedCategories.includes(product.categoryId));
+  }
+
+  if (query) {
+    const normalizedquery = query
+      .toLowerCase()
+      .trim();
+
+    filteredProducts = filteredProducts
+      .filter(product => product.name.toLowerCase().includes(normalizedquery));
   }
 
   return filteredProducts;
@@ -44,14 +53,10 @@ const getFilteredProducts = (selectedUser, selectedCategory) => {
 
 export const App = () => {
   const [selectedUser, setselectedUser] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [query, setQuery] = useState('');
 
-  const categoriesAmount = categoriesFromServer.length;
-
-  console.log(selectedUser);
-  console.log(selectedCategory);
-
-  const products = getFilteredProducts(selectedUser, selectedCategory);
+  const products = getFilteredProducts(selectedUser, selectedCategories, query);
 
   const handleFilterByUser = (userId) => {
     setselectedUser(userId);
@@ -59,12 +64,12 @@ export const App = () => {
 
   const handleFilterByCategory = (categoryId) => {
     if (!categoryId) {
-      setSelectedCategory([]);
+      setSelectedCategories([]);
 
       return;
     }
 
-    setSelectedCategory((prevState) => {
+    setSelectedCategories((prevState) => {
       if (prevState.includes(categoryId)) {
         return prevState.filter(id => id !== categoryId);
       }
@@ -72,6 +77,12 @@ export const App = () => {
       return [...prevState, categoryId];
     });
   };
+
+  const handleQuerychange = (event) => {
+    setQuery(event.target.value);
+  };
+
+  const categoriesAmount = categoriesFromServer.length;
 
   return (
     <div className="section">
@@ -109,7 +120,8 @@ export const App = () => {
                   type="text"
                   className="input"
                   placeholder="Search"
-                  value="qwe"
+                  value={query}
+                  onChange={handleQuerychange}
                 />
 
                 <span className="icon is-left">
@@ -134,8 +146,8 @@ export const App = () => {
                 onClick={() => handleFilterByCategory(null)}
                 className={cn(
                   'button mr-2 my-1', {
-                    'is-info': selectedCategory.length === 0
-                      || selectedCategory.length === categoriesAmount,
+                    'is-info': selectedCategories.length === 0
+                      || selectedCategories.length === categoriesAmount,
                   },
                 )}
               >
@@ -147,7 +159,7 @@ export const App = () => {
                   data-cy="Category"
                   className={cn(
                     'button mr-2 my-1', {
-                      'is-info': selectedCategory.includes(category.id),
+                      'is-info': selectedCategories.includes(category.id),
                     },
                   )}
                   href="#/"
